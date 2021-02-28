@@ -16,7 +16,7 @@ namespace The_Robotic_Systems
    Description: includes Talent Show, will include Data Recorder, Alarm System, User Programming
    Author: Chris Kieliszewski
    Date Created: 2/17/2021
-   Last Modified: 2/21/2021
+   Last Modified: 2/28/2021
    ************************************/
     {
         public static void Main(string[] args)
@@ -24,6 +24,7 @@ namespace The_Robotic_Systems
             WelcomeScreen();
             MainMenu();
             ClosingScreen();
+            
         }
         private static void MainMenu()
         {
@@ -153,11 +154,98 @@ namespace The_Robotic_Systems
             robot.setMotors(0, 0);
             ContinuePrompt();
 
+        //data recorder
+         
+
+
 
         }
 
         #endregion
         #region dataRecorderModule
+        public static void DataRecorderDisplayGetData(double[] temperatures)
+        {
+            DataRecorderDisplayTable(temperatures);
+
+            ContinuePrompt();
+
+        }
+
+        private static int DataRecorderDisplayGetNumberOfDataPoints()
+        {
+            Console.CursorVisible = true;
+            DisplayHeader("\nOption A Chosen" + "\nGet number of data points");
+
+            Console.Write("\nHow many data points would you like? >> ");
+            string userResponse = Console.ReadLine();
+
+            int.TryParse(userResponse, out int numberofDataPoints);
+
+            ContinuePrompt();
+            return numberofDataPoints;
+        }
+
+        private static double DataRecorderDisplayGetDataPointFrequency()
+        {
+            Console.CursorVisible = true;
+            DisplayHeader("\nOption B Chosen" + "\nGet frequency of Data Points");
+
+            Console.Write("\nFrequency of Data Points: ");
+
+            double.TryParse(Console.ReadLine(), out double dataPointFrequency);
+
+            ContinuePrompt();
+            return dataPointFrequency;
+        }
+
+        private static double[] DataRecorderDisplayGetData(int numberOfDataPoints, double dataPointFrequency, Finch robot)
+        {
+            Console.CursorVisible = false;
+            double[] temperatures = new double[numberOfDataPoints];
+            Console.WriteLine("\nOption C Chosen");
+            DisplayHeader("\nOption C Chosen" + "\nGet Data");
+
+            Console.WriteLine($"Number of data points: {numberOfDataPoints}");
+            Console.WriteLine($"Data point frequency: {dataPointFrequency}");
+            Console.WriteLine();
+            Console.WriteLine("The Finch robot is ready to begin recording the temperature data.");
+            ContinuePrompt();
+
+            for (int i = 0; i < numberOfDataPoints; i++)
+            {
+                temperatures[i] = robot.getTemperature();
+                Console.WriteLine($"Reading {i + 1}: {temperatures[i]:n2} ");
+                int waitInSeconds = (int)((dataPointFrequency) * 1000);
+                robot.wait(waitInSeconds);
+            }
+
+            ContinuePrompt();
+
+            return temperatures;
+        }
+
+        private static void DataRecorderDisplayTable(double[] temperatures)
+        {
+            Console.CursorVisible = false;
+            DisplayHeader("\nOption D Chosen" + "\nShow Data");
+
+            Console.WriteLine(
+                "Recording #".PadLeft(19) +
+                "Temp".PadLeft(19)
+                );
+            Console.WriteLine(
+                "-----------".PadLeft(19) +
+                "-----------".PadLeft(19)
+                );
+
+            for (int i = 0; i < temperatures.Length; i++)
+            {
+                Console.WriteLine(
+               (i + 1).ToString().PadLeft(19) +
+               temperatures[i].ToString("n2").PadLeft(19)
+               );
+            }
+        }
 
         #endregion
         #region alarmSystemModule
@@ -204,11 +292,51 @@ namespace The_Robotic_Systems
 
 
 
-        private static void DisplayDataRecorder(Finch robot)
+        public static void DisplayDataRecorder(Finch robot)
         {
-            DisplayHeader("Data Recorder");
-            Console.WriteLine("Under Construction");
-            ContinuePrompt();
+            Console.CursorVisible = true;
+            int numberOfDataPoints = 0;
+            double dataPointFrequency = 0;
+            double[] temperatures = null;
+
+            robot.connect();
+            bool quitData = false;
+            do
+            {
+                DisplayHeader("\nData Recorder");
+                Console.WriteLine("\nWhat would you like to see?");
+                Console.WriteLine("a) Number of Data Points");
+                Console.WriteLine("b) Frequency of Data Points");
+                Console.WriteLine("c) Get Data");
+                Console.WriteLine("d) Show Data");
+                Console.WriteLine("e) Return to main menu");
+               
+                string MenuChoice = Console.ReadLine().ToLower();
+                switch (MenuChoice)
+                {
+                    case "a":
+                        numberOfDataPoints = DataRecorderDisplayGetNumberOfDataPoints();
+                        break;
+
+                    case "b":
+                        dataPointFrequency = DataRecorderDisplayGetDataPointFrequency();
+                        break;
+
+                    case "c":
+                        temperatures = DataRecorderDisplayGetData(numberOfDataPoints, dataPointFrequency, robot);
+                        break;
+
+                    case "d":
+                        DataRecorderDisplayGetData(temperatures);
+                        break;
+
+                    case "e":
+                        quitData = true;
+                        break;
+
+                    
+                }
+            } while (!quitData);
         }
         private static void DisplayAlarmSystem(Finch robot)
         {
@@ -228,6 +356,7 @@ namespace The_Robotic_Systems
         {
             Console.WriteLine("Press Any Key To Continue.");
             Console.ReadKey();
+            
         }
         public static void DisplayHeader(string headerText)
         {
