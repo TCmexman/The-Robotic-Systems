@@ -1,10 +1,8 @@
 ﻿
+using FinchAPI;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
-using FinchAPI;
 
 
 namespace The_Robotic_Systems
@@ -16,7 +14,7 @@ namespace The_Robotic_Systems
    Description: includes Talent Show, will include Data Recorder, Alarm System, User Programming
    Author: Chris Kieliszewski
    Date Created: 2/17/2021
-   Last Modified: 2/28/2021
+   Last Modified: 3/07/2021
    ************************************/
     {
         public static void Main(string[] args)
@@ -24,9 +22,9 @@ namespace The_Robotic_Systems
             WelcomeScreen();
             MainMenu();
             ClosingScreen();
-            
+
         }
-        private static void MainMenu()
+        public static void MainMenu()
         {
             Finch robot = new Finch();
             DisplayHeader("Main Menu");
@@ -154,8 +152,8 @@ namespace The_Robotic_Systems
             robot.setMotors(0, 0);
             ContinuePrompt();
 
-        //data recorder
-         
+            //data recorder
+
 
 
 
@@ -249,13 +247,184 @@ namespace The_Robotic_Systems
 
         #endregion
         #region alarmSystemModule
+        public static string LightAlarmDisplaySetSensorstoMonitor()
+        {
+            List<string> correctSensors = new List<string>() { "left", "right", "both" };
+            string sensorsToMonitor;
+            DisplayHeader("\nSensors To Monitor");
+
+            Console.Write("Sensors to Monitor? (Left, Right, Both): ");
+            sensorsToMonitor = Console.ReadLine().ToLower();
+
+            if (correctSensors.Contains(sensorsToMonitor))
+            {
+                return sensorsToMonitor;
+            }
+            else
+            {
+                DisplayHeader("\nPlease input \"left\", \"right\", or \"both\"");
+                ContinuePrompt();
+                return LightAlarmDisplaySetSensorstoMonitor();
+            }
+        }
+
+        public static string LightAlarmDisplaySetRangeType()
+        {
+            string[] correctRange = new string[] { "minimum", "maximum" };
+            string rangeType;
+            DisplayHeader("\nSet Range Type");
+
+            Console.Write("Range Type? (Minimum, Maximum): ");
+            rangeType = Console.ReadLine().ToLower();
+
+            if (correctRange.Contains(rangeType))
+            {
+                return rangeType;
+            }
+            else
+            {
+                DisplayHeader("\nPlease input \"maximum\" or \"minimum\"");
+                ContinuePrompt();
+                return LightAlarmDisplaySetRangeType();
+            }
+        }
+
+        public static int LightAlarmDisplaySetMinMaxThresholdValue(Finch robot, string rangeType)
+        {
+            string minMaxThresholdValue;
+            int nMinMaxThresholdValue;
+
+            DisplayHeader("\nMinimum/Maximum Threshold Value");
+
+            Console.WriteLine($"Left light sensor ambient value: {robot.getLeftLightSensor()}");
+            Console.WriteLine($"Right light sensor ambient value: {robot.getRightLightSensor()}");
+            Console.WriteLine();
+            Console.Write($"Enter The {rangeType} light value: ");
+
+            minMaxThresholdValue = Console.ReadLine();
+
+            char firstChar = minMaxThresholdValue[0];
+            bool isNumber = Char.IsDigit(firstChar);
+
+            if (!isNumber)
+            {
+                DisplayHeader("\nPlease input an integer");
+                ContinuePrompt();
+                return LightAlarmDisplaySetTimeToMonitor();
+            }
+            else
+            {
+                nMinMaxThresholdValue = int.Parse(minMaxThresholdValue);
+                return nMinMaxThresholdValue;
+            }
+        }
+
+        public static int LightAlarmDisplaySetTimeToMonitor()
+        {
+            string timeToMonitor;
+            int nTimeToMonitor;
+            DisplayHeader("\nSet Time To Monitor");
+
+            Console.Write("Desired monitor time? (in seconds): ");
+            timeToMonitor = Console.ReadLine();
+
+            char firstChar = timeToMonitor[0];
+            bool isNumber = Char.IsDigit(firstChar);
+
+            if (!isNumber)
+            {
+                DisplayHeader("\nPlease input an integer");
+                ContinuePrompt();
+                return LightAlarmDisplaySetTimeToMonitor();
+            }
+            else
+            {
+                nTimeToMonitor = int.Parse(timeToMonitor);
+                return nTimeToMonitor;
+            }
+        }
+
+        private static void LightAlarmDisplaySetAlarm(Finch robot,
+                                                    int timeToMonitor,
+                                                    string rangeType,
+                                                    int minMaxThresholdValue,
+                                                    string sensorsToMonitor)
+        {
+            int secondsElapsed = 0;
+            bool thresholdExceeded = false;
+            int currentLightSensorValue = 0;
+            DisplayHeader("\nSet Light Alarm");
+            Console.WriteLine($"Sensors to monitor: {sensorsToMonitor}");
+            Console.WriteLine("Range Type: {0}", rangeType);
+            Console.WriteLine($"Min/max Threshold Value: {minMaxThresholdValue}");
+            Console.WriteLine($"Time to monitor: {timeToMonitor}");
+            Console.WriteLine();
+
+            Console.WriteLine("Press any key to begin monitoring.");
+            Console.ReadKey();
+
+            while (secondsElapsed < timeToMonitor && !thresholdExceeded)
+            {
+                switch (sensorsToMonitor)
+                {
+                    case "left":
+                        currentLightSensorValue = robot.getLeftLightSensor();
+                        break;
+
+                    case "right":
+
+                        currentLightSensorValue = robot.getRightLightSensor();
+                        break;
+
+                    case "both":
+                        currentLightSensorValue = (robot.getRightLightSensor() + robot.getLeftLightSensor()) / 2;
+                        break;
+                }
+                switch (rangeType)
+                {
+                    case "minimum":
+                        if (currentLightSensorValue < minMaxThresholdValue)
+                        {
+                            thresholdExceeded = true;
+                        }
+                        break;
+
+                    case "maximum":
+                        if (currentLightSensorValue > minMaxThresholdValue)
+                        {
+                            thresholdExceeded = true;
+                        }
+                        break;
+                }
+                robot.wait(1000);
+                secondsElapsed++;
+                Console.WriteLine("Current Light Value: {0} ", currentLightSensorValue);
+            }
+
+            if (thresholdExceeded)
+            {
+                Console.WriteLine($"The {rangeType} threshold value was exceeded!");
+                robot.noteOn(494);
+                robot.wait(5000);
+                robot.noteOff();
+
+            }
+            else
+            {
+                Console.WriteLine($"The {rangeType} threshold value was not exceeded!");
+            }
+            ContinuePrompt();
+
+            return;
+
+        }
 
         #endregion
         #region userProgrammingModule
 
         #endregion
         #region moduleMenus
-        private static void DisplayTalentShow(Finch robot)
+        public static void DisplayTalentShow(Finch robot)
         {
             robot.connect();
             bool leave = false;
@@ -310,7 +479,7 @@ namespace The_Robotic_Systems
                 Console.WriteLine("c) Get Data");
                 Console.WriteLine("d) Show Data");
                 Console.WriteLine("e) Return to main menu");
-               
+
                 string MenuChoice = Console.ReadLine().ToLower();
                 switch (MenuChoice)
                 {
@@ -334,17 +503,64 @@ namespace The_Robotic_Systems
                         quitData = true;
                         break;
 
-                    
+
                 }
             } while (!quitData);
         }
-        private static void DisplayAlarmSystem(Finch robot)
+        public static void DisplayAlarmSystem(Finch robot)
         {
-            DisplayHeader("Alarm System");
-            Console.WriteLine("Under Construction");
-            ContinuePrompt();
+            Console.CursorVisible = true;
+
+            robot.connect();
+            bool quitAlarm = false;
+
+            string sensorsToMonitor = "";
+            string rangeType = "";
+            int minMaxThresholdValue = 0;
+            int timeToMonitor = 0;
+
+            do
+            {
+                DisplayHeader("\nAlarm System");
+                Console.WriteLine("\nWhat would you like to do?");
+                Console.WriteLine("a) Set sensors to monitor");
+                Console.WriteLine("b) Set range type");
+                Console.WriteLine("c) Set minumum/maximum threshold");
+                Console.WriteLine("d) Set time to monitor");
+                Console.WriteLine("e) Set alarm");
+                Console.WriteLine("f) Return to main menu");
+
+                string MenuChoice = Console.ReadLine().ToLower();
+                switch (MenuChoice)
+                {
+                    case "a":
+                        sensorsToMonitor = LightAlarmDisplaySetSensorstoMonitor();
+                        break;
+
+                    case "b":
+                        rangeType = LightAlarmDisplaySetRangeType();
+                        break;
+
+                    case "c":
+                        minMaxThresholdValue = LightAlarmDisplaySetMinMaxThresholdValue(robot, rangeType);
+                        break;
+
+                    case "d":
+                        timeToMonitor = LightAlarmDisplaySetTimeToMonitor();
+                        break;
+
+                    case "e":
+                        LightAlarmDisplaySetAlarm(robot, timeToMonitor, rangeType, minMaxThresholdValue, sensorsToMonitor);
+                        break;
+
+                    case "f":
+                        quitAlarm = true;
+                        break;
+
+                }
+            } while (!quitAlarm);
         }
-        private static void DisplayUserProgramming(Finch robot)
+        public static void DisplayUserProgramming(Finch robot)
         {
             DisplayHeader("User Programing System");
             Console.WriteLine("Under Construction");
@@ -356,7 +572,7 @@ namespace The_Robotic_Systems
         {
             Console.WriteLine("Press Any Key To Continue.");
             Console.ReadKey();
-            
+
         }
         public static void DisplayHeader(string headerText)
         {
@@ -376,7 +592,7 @@ namespace The_Robotic_Systems
             Console.WriteLine("Thank You For Stopping By");
             ContinuePrompt();
         }
-        private static void ConnectToFinchRobot(Finch robot)
+        public static void ConnectToFinchRobot(Finch robot)
         {
             Console.CursorVisible = false;
             DisplayHeader("Connect to Finch");
@@ -399,7 +615,7 @@ namespace The_Robotic_Systems
             MainMenu();
 
         }
-        private static void DisplayDisConnectFinchRobot(Finch robot)
+        public static void DisplayDisConnectFinchRobot(Finch robot)
         {
             DisplayHeader("Disconnect from Finch");
             ContinuePrompt();
