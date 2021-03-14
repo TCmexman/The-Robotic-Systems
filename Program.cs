@@ -8,6 +8,20 @@ using System.Linq;
 namespace The_Robotic_Systems
 {
 
+    public enum Command
+    {
+        NONE,
+        MOVEFORWARD,
+        MOVEBACKWARD,
+        STOPMOTORS,
+        WAIT,
+        TURNRIGHT,
+        TURNLEFT,
+        LEDON,
+        LEDOFF,
+        GETTEMPERATURE,
+        DONE
+    }
     class Program
     /************************************
    Title: The-Robotic-Systems
@@ -79,7 +93,7 @@ namespace The_Robotic_Systems
 
         #region talentShowModule
         // light up and high pitch sound for 2 sec. //
-        private static void LightAndSound(Finch robot)
+        public static void LightAndSound(Finch robot)
         {
             Console.WriteLine("Working...");
             robot.setLED(200, 130, 5);
@@ -90,7 +104,7 @@ namespace The_Robotic_Systems
             ContinuePrompt();
         }
         //quick dance back and Forth
-        private static void Dance(Finch robot)
+        public static void Dance(Finch robot)
         {
             Console.WriteLine("I Can Dance");
             robot.setMotors(150, -150);
@@ -106,7 +120,7 @@ namespace The_Robotic_Systems
         }
 
         // A bit of song and dance and lights. hot cross buns //
-        private static void MixingItUp(Finch robot)
+        public static void MixingItUp(Finch robot)
         {
             Console.WriteLine("Here I Go!");
             robot.setLED(235, 64, 52);
@@ -169,7 +183,7 @@ namespace The_Robotic_Systems
 
         }
 
-        private static int DataRecorderDisplayGetNumberOfDataPoints()
+        public static int DataRecorderDisplayGetNumberOfDataPoints()
         {
             Console.CursorVisible = true;
             DisplayHeader("\nOption A Chosen" + "\nGet number of data points");
@@ -183,7 +197,7 @@ namespace The_Robotic_Systems
             return numberofDataPoints;
         }
 
-        private static double DataRecorderDisplayGetDataPointFrequency()
+        public static double DataRecorderDisplayGetDataPointFrequency()
         {
             Console.CursorVisible = true;
             DisplayHeader("\nOption B Chosen" + "\nGet frequency of Data Points");
@@ -196,7 +210,7 @@ namespace The_Robotic_Systems
             return dataPointFrequency;
         }
 
-        private static double[] DataRecorderDisplayGetData(int numberOfDataPoints, double dataPointFrequency, Finch robot)
+        public static double[] DataRecorderDisplayGetData(int numberOfDataPoints, double dataPointFrequency, Finch robot)
         {
             Console.CursorVisible = false;
             double[] temperatures = new double[numberOfDataPoints];
@@ -222,7 +236,7 @@ namespace The_Robotic_Systems
             return temperatures;
         }
 
-        private static void DataRecorderDisplayTable(double[] temperatures)
+        public static void DataRecorderDisplayTable(double[] temperatures)
         {
             Console.CursorVisible = false;
             DisplayHeader("\nOption D Chosen" + "\nShow Data");
@@ -344,7 +358,7 @@ namespace The_Robotic_Systems
             }
         }
 
-        private static void LightAlarmDisplaySetAlarm(Finch robot,
+        public static void LightAlarmDisplaySetAlarm(Finch robot,
                                                     int timeToMonitor,
                                                     string rangeType,
                                                     int minMaxThresholdValue,
@@ -421,6 +435,182 @@ namespace The_Robotic_Systems
 
         #endregion
         #region userProgrammingModule
+        public static (int motorSpeed, int ledBrightness, double waitSeconds) DisplayUserProgrammingGetCommandsParamter()
+        {
+            DisplayHeader("Command Parameters");
+
+            (int motorSpeed, int ledBrightness, double waitSeconds) commandParameters;
+            commandParameters.motorSpeed = 0;
+            commandParameters.ledBrightness = 0;
+            commandParameters.waitSeconds = 0;
+
+            GetValidInteger("Enter Motor Speed [1 - 255]: ", 1, 255, out commandParameters.motorSpeed);
+            GetValidInteger("Enter LED brightness [1 - 255]: ", 1, 255, out commandParameters.ledBrightness);
+            GetValidDouble("Enter time to wait in seconds: ", 0, 10, out commandParameters.waitSeconds);
+
+            Console.WriteLine($"Motor speed: {commandParameters.motorSpeed}");
+            Console.WriteLine($"LED Brightness: {commandParameters.ledBrightness}");
+            Console.WriteLine($"Time to wait: {commandParameters.waitSeconds}");
+
+            ContinuePrompt();
+
+            return commandParameters;
+        }
+
+        public static void DisplayUserProgrammingGetFinchCommands(List<Command> commands)
+        {
+            Command command = Command.NONE;
+
+            DisplayHeader("Finch Robot Commands");
+
+            int commandCount = 1;
+            Console.WriteLine("List of available commands");
+            Console.WriteLine("--------------------------");
+            foreach (string commandName in Enum.GetNames(typeof(Command)))
+            {
+                Console.Write($"- {commandName.ToLower()}");
+                if (commandCount % 1 == 0) Console.Write("\n");
+                commandCount++;
+            }
+            Console.WriteLine();
+
+            while (command != Command.DONE)
+            {
+                Console.Write("Enter command: ");
+
+                if (Enum.TryParse(Console.ReadLine().ToUpper(), out command))
+                {
+                    commands.Add(command);
+                }
+                else
+                {
+                    Console.WriteLine("Please enter a command from the list above.");
+                }
+            }
+        }
+
+        public static void DisplayUserProgrammingShowFinchCommands(List<Command> commands)
+        {
+            DisplayHeader("Your Commands\n");
+            for (int i = 0; i <= commands.Count - 1; i++)
+            {
+                Console.WriteLine($"{commands[i]}");
+            }
+            ContinuePrompt();
+        }
+
+        public static void DisplayUserProgrammingExecuteFinchCommands
+            (Finch robot,
+            List<Command> commands,
+            (int motorSpeed, int ledBrightness, double waitSeconds) commandParameters)
+        {
+            int motorSpeed = commandParameters.motorSpeed;
+            int ledBrightness = commandParameters.ledBrightness;
+            int waitMilliSeconds = (int)(commandParameters.waitSeconds * 1000);
+            string commandsFeedback = "";
+            const int TURNING_MOTOR_SPEED = 100;
+
+            DisplayHeader("Execute Finch Commands");
+
+            Console.WriteLine("Finch Ready To Execute Commands.");
+            ContinuePrompt();
+
+            foreach (Command command in commands)
+            {
+                switch (command)
+                {
+                    case Command.NONE:
+                        break;
+
+                    case Command.MOVEFORWARD:
+                        robot.setMotors(motorSpeed, motorSpeed);
+                        commandsFeedback = Command.MOVEFORWARD.ToString();
+                        break;
+
+                    case Command.MOVEBACKWARD:
+                        robot.setMotors(-motorSpeed, -motorSpeed);
+                        commandsFeedback = Command.MOVEBACKWARD.ToString();
+                        break;
+
+                    case Command.GETTEMPERATURE:
+                        commandsFeedback = $"Temperature: {robot.getTemperature().ToString("n2")}\n";
+                        break;
+
+                    case Command.LEDOFF:
+                        robot.setLED(0, 0, 0);
+                        commandsFeedback = Command.LEDOFF.ToString();
+                        break;
+
+                    case Command.LEDON:
+                        robot.setLED(ledBrightness, ledBrightness, ledBrightness);
+                        commandsFeedback = Command.LEDON.ToString();
+                        break;
+
+                    case Command.WAIT:
+                        robot.wait(waitMilliSeconds);
+                        commandsFeedback = Command.WAIT.ToString();
+                        break;
+
+                    case Command.STOPMOTORS:
+                        robot.setMotors(0, 0);
+                        commandsFeedback = Command.STOPMOTORS.ToString();
+                        break;
+
+                    case Command.TURNLEFT:
+                        robot.setMotors(TURNING_MOTOR_SPEED, -TURNING_MOTOR_SPEED);
+                        commandsFeedback = Command.TURNLEFT.ToString();
+                        break;
+
+                    case Command.TURNRIGHT:
+                        robot.setMotors(-TURNING_MOTOR_SPEED, TURNING_MOTOR_SPEED);
+                        commandsFeedback = Command.TURNRIGHT.ToString();
+                        break;
+                }
+                Console.WriteLine($"{commandsFeedback}");
+            }
+        }
+
+
+        public static void GetValidInteger(string v1, int v2, int v3, out int motorSpeed)
+        {
+            bool validAns = false;
+            do
+            {
+                Console.Write(v1);
+                bool isNumber = Int32.TryParse(Console.ReadLine(), out motorSpeed);
+
+                if (isNumber == true && motorSpeed <= 255 && motorSpeed >= 1)
+                {
+                    validAns = true;
+                }
+                else
+                {
+                    Console.Clear();
+                    Console.WriteLine("Please enter an integer between '1' and '255'\n");
+                }
+            } while (!validAns);
+        }
+
+        public static void GetValidDouble(string v1, int v2, int v3, out double waitSeconds)
+        {
+            bool validAns = false;
+            do
+            {
+                Console.Write(v1);
+                bool isDouble = Double.TryParse(Console.ReadLine(), out waitSeconds);
+
+                if (isDouble == false || waitSeconds < 0 || waitSeconds > 10)
+                {
+                    Console.Clear();
+                    Console.WriteLine("Please enter an number between '0' and '10'");
+                }
+                else
+                {
+                    validAns = true;
+                }
+            } while (!validAns);
+        }
+
 
         #endregion
         #region moduleMenus
@@ -562,9 +752,57 @@ namespace The_Robotic_Systems
         }
         public static void DisplayUserProgramming(Finch robot)
         {
-            DisplayHeader("User Programing System");
-            Console.WriteLine("Under Construction");
-            ContinuePrompt();
+            robot.connect();
+            bool quitUP = false;
+
+            (int motorSpeed, int ledBrightness, double waitSeconds) commandParameters;
+            commandParameters.motorSpeed = 0;
+            commandParameters.ledBrightness = 0;
+            commandParameters.waitSeconds = 0;
+
+            List<Command> commands = new List<Command>();
+
+            do
+            {
+                DisplayHeader("User Programming");
+                Console.WriteLine("What would you like to do?");
+                Console.WriteLine("a) Set command parameters");
+                Console.WriteLine("b) Add commands");
+                Console.WriteLine("c) View commands");
+                Console.WriteLine("d) Execute commands");
+                Console.WriteLine("e) Return to main menu");
+                DisplayChooseAnOption();
+                string MenuChoice = Console.ReadLine().ToLower();
+                switch (MenuChoice)
+                {
+                    case "a":
+                        commandParameters = DisplayUserProgrammingGetCommandsParamter();
+                        break;
+
+                    case "b":
+                        DisplayUserProgrammingGetFinchCommands(commands);
+                        break;
+
+                    case "c":
+                        DisplayUserProgrammingShowFinchCommands(commands);
+                        break;
+
+                    case "d":
+                        DisplayUserProgrammingExecuteFinchCommands(robot, commands, commandParameters);
+                        break;
+
+                    case "e":
+                        quitUP = true;
+                        Console.Clear();
+                        break;
+                        
+
+                    default:
+                        DisplayIncorrectInput();
+                        break;
+                }
+            } while (!quitUP);
+
         }
         #endregion
         #region tools
@@ -623,6 +861,18 @@ namespace The_Robotic_Systems
             DisplayHeader("Finch has been disconnected");
             ContinuePrompt();
         }
+        public static void DisplayChooseAnOption()
+        {
+            Console.Write("Choose an option>> ");
+        }
+        public static void DisplayIncorrectInput()
+        {
+            Console.Clear();
+            Console.WriteLine("\nSorry, that is not one of the options.");
+            Console.WriteLine("Press any key to try again.");
+            Console.ReadKey();
+        }
         #endregion
+
     }
 }
